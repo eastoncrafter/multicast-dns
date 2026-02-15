@@ -17,7 +17,10 @@ const WS_PORT = process.env.WS_PORT || 8081
 
 // Create HTTP server to serve the browser client
 const server = http.createServer((req, res) => {
-  if (req.url === '/' || req.url === '/index.html') {
+  // Parse URL to handle query parameters
+  const urlPath = req.url.split('?')[0]
+
+  if (urlPath === '/' || urlPath === '/index.html') {
     fs.readFile(path.join(__dirname, 'browser-scanner.html'), (err, data) => {
       if (err) {
         res.writeHead(500)
