@@ -6,6 +6,21 @@ Low level multicast-dns implementation in pure javascript
 npm install multicast-dns
 ```
 
+## Browser-based Network Scanner
+
+A browser-based mDNS network scanner is now available! Discover devices and services on your local network through an intuitive web interface.
+
+**Quick Start:**
+
+```bash
+npm install
+npm run browser-scanner
+```
+
+Then open http://localhost:8080 in your browser and click "Start Scan".
+
+For more details, see [BROWSER-SCANNER.md](BROWSER-SCANNER.md)
+
 ## Usage
 
 ``` js
