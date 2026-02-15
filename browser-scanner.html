@@ -378,7 +378,10 @@
     
     // Connect to WebSocket server
     function connect() {
-      const wsUrl = `ws://${window.location.hostname}:8081`;
+      // Try to get WS port from URL parameter, otherwise use default 8081
+      const urlParams = new URLSearchParams(window.location.search);
+      const wsPort = urlParams.get('wsPort') || '8081';
+      const wsUrl = `ws://${window.location.hostname}:${wsPort}`;
       addLog('info', `Connecting to ${wsUrl}...`);
       
       ws = new WebSocket(wsUrl);
@@ -511,7 +514,7 @@
       }
       
       const serviceArray = Array.from(services.values());
-      serviceArray.sort((a, b) => a.name.localeCompare(b.name));
+      serviceArray.sort((a, b) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' }));
       
       container.innerHTML = serviceArray.map(service => `
         <div class="service-card">

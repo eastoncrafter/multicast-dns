@@ -74,6 +74,12 @@ Example:
 PORT=3000 WS_PORT=3001 npm run browser-scanner
 ```
 
+If you use a custom WebSocket port, you can specify it in the browser URL:
+
+```
+http://localhost:3000?wsPort=3001
+```
+
 ## Architecture
 
 ### Components
