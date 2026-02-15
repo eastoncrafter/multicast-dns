@@ -1,0 +1,602 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mDNS Network Scanner</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 12px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+      overflow: hidden;
+    }
+    
+    .header {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 30px;
+      text-align: center;
+    }
+    
+    .header h1 {
+      font-size: 2.5em;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0,0,0,0.2);
+    }
+    
+    .header p {
+      font-size: 1.1em;
+      opacity: 0.9;
+    }
+    
+    .controls {
+      padding: 20px 30px;
+      background: #f8f9fa;
+      border-bottom: 1px solid #e9ecef;
+      display: flex;
+      gap: 15px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    
+    .btn {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .btn-primary {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .btn-primary:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+    }
+    
+    .btn-secondary {
+      background: #6c757d;
+      color: white;
+    }
+    
+    .btn-secondary:hover:not(:disabled) {
+      background: #5a6268;
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(108, 117, 125, 0.4);
+    }
+    
+    .btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+    }
+    
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-size: 14px;
+      font-weight: 600;
+      margin-left: auto;
+    }
+    
+    .status.connected {
+      background: #d4edda;
+      color: #155724;
+    }
+    
+    .status.disconnected {
+      background: #f8d7da;
+      color: #721c24;
+    }
+    
+    .status.scanning {
+      background: #fff3cd;
+      color: #856404;
+    }
+    
+    .status-indicator {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+    
+    .status.connected .status-indicator {
+      background: #28a745;
+      animation: pulse 2s infinite;
+    }
+    
+    .status.scanning .status-indicator {
+      background: #ffc107;
+      animation: pulse 1s infinite;
+    }
+    
+    .status.disconnected .status-indicator {
+      background: #dc3545;
+    }
+    
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+    
+    .content {
+      padding: 30px;
+    }
+    
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+    
+    .stat-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .stat-card h3 {
+      font-size: 0.9em;
+      opacity: 0.9;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    
+    .stat-card .value {
+      font-size: 2em;
+      font-weight: bold;
+    }
+    
+    .services-container {
+      background: #f8f9fa;
+      border-radius: 8px;
+      padding: 20px;
+      max-height: 600px;
+      overflow-y: auto;
+    }
+    
+    .services-container h2 {
+      margin-bottom: 20px;
+      color: #333;
+    }
+    
+    .service-card {
+      background: white;
+      border-radius: 8px;
+      padding: 20px;
+      margin-bottom: 15px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+      transition: all 0.3s ease;
+    }
+    
+    .service-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    }
+    
+    .service-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: start;
+      margin-bottom: 15px;
+      padding-bottom: 15px;
+      border-bottom: 2px solid #e9ecef;
+    }
+    
+    .service-name {
+      font-size: 1.2em;
+      font-weight: bold;
+      color: #667eea;
+    }
+    
+    .service-type {
+      background: #e9ecef;
+      padding: 4px 12px;
+      border-radius: 4px;
+      font-size: 0.85em;
+      font-weight: 600;
+      color: #495057;
+    }
+    
+    .service-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+    }
+    
+    .service-detail {
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .service-detail-label {
+      font-size: 0.85em;
+      color: #6c757d;
+      margin-bottom: 4px;
+      font-weight: 600;
+    }
+    
+    .service-detail-value {
+      color: #333;
+      word-break: break-all;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #6c757d;
+    }
+    
+    .empty-state-icon {
+      font-size: 4em;
+      margin-bottom: 20px;
+      opacity: 0.5;
+    }
+    
+    .empty-state h3 {
+      font-size: 1.5em;
+      margin-bottom: 10px;
+    }
+    
+    .empty-state p {
+      font-size: 1.1em;
+    }
+    
+    .log-container {
+      margin-top: 30px;
+      background: #212529;
+      border-radius: 8px;
+      padding: 20px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: 'Courier New', monospace;
+      font-size: 12px;
+      color: #f8f9fa;
+    }
+    
+    .log-entry {
+      margin-bottom: 5px;
+      padding: 5px;
+      border-left: 3px solid #495057;
+      padding-left: 10px;
+    }
+    
+    .log-entry.info {
+      border-left-color: #17a2b8;
+    }
+    
+    .log-entry.success {
+      border-left-color: #28a745;
+    }
+    
+    .log-entry.warning {
+      border-left-color: #ffc107;
+    }
+    
+    .log-entry.error {
+      border-left-color: #dc3545;
+    }
+    
+    .log-time {
+      color: #6c757d;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1>🔍 mDNS Network Scanner</h1>
+      <p>Discover devices and services on your local network</p>
+    </div>
+    
+    <div class="controls">
+      <button class="btn btn-primary" id="scanBtn" onclick="startScan()">
+        Start Scan
+      </button>
+      <button class="btn btn-secondary" id="clearBtn" onclick="clearServices()">
+        Clear
+      </button>
+      <div class="status disconnected" id="status">
+        <span class="status-indicator"></span>
+        <span id="statusText">Disconnected</span>
+      </div>
+    </div>
+    
+    <div class="content">
+      <div class="stats">
+        <div class="stat-card">
+          <h3>Discovered Devices</h3>
+          <div class="value" id="deviceCount">0</div>
+        </div>
+        <div class="stat-card">
+          <h3>Total Services</h3>
+          <div class="value" id="serviceCount">0</div>
+        </div>
+        <div class="stat-card">
+          <h3>Packets Received</h3>
+          <div class="value" id="packetCount">0</div>
+        </div>
+      </div>
+      
+      <div class="services-container">
+        <h2>Discovered Services</h2>
+        <div id="servicesList">
+          <div class="empty-state">
+            <div class="empty-state-icon">📡</div>
+            <h3>No services discovered yet</h3>
+            <p>Click "Start Scan" to discover devices on your network</p>
+          </div>
+        </div>
+      </div>
+      
+      <div class="log-container" id="logContainer">
+        <div class="log-entry info">
+          <span class="log-time">[--:--:--]</span>
+          <span>Waiting for connection...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <script>
+    let ws = null;
+    let services = new Map();
+    let devices = new Set();
+    let packetCount = 0;
+    let isScanning = false;
+    
+    // Connect to WebSocket server
+    function connect() {
+      const wsUrl = `ws://${window.location.hostname}:8081`;
+      addLog('info', `Connecting to ${wsUrl}...`);
+      
+      ws = new WebSocket(wsUrl);
+      
+      ws.onopen = () => {
+        addLog('success', 'Connected to mDNS proxy server');
+        updateStatus('connected', 'Connected');
+      };
+      
+      ws.onmessage = (event) => {
+        try {
+          const msg = JSON.parse(event.data);
+          handleMessage(msg);
+        } catch (err) {
+          console.error('Error parsing message:', err);
+        }
+      };
+      
+      ws.onerror = (error) => {
+        addLog('error', 'WebSocket error occurred');
+        console.error('WebSocket error:', error);
+      };
+      
+      ws.onclose = () => {
+        addLog('warning', 'Disconnected from server');
+        updateStatus('disconnected', 'Disconnected');
+        setTimeout(connect, 3000); // Reconnect after 3 seconds
+      };
+    }
+    
+    function handleMessage(msg) {
+      if (msg.type === 'connected') {
+        addLog('success', msg.message);
+      } else if (msg.type === 'response') {
+        packetCount++;
+        updatePacketCount();
+        processResponse(msg.data, msg.rinfo);
+      } else if (msg.type === 'query') {
+        // Optional: handle query messages
+      } else if (msg.type === 'warning') {
+        addLog('warning', msg.message);
+      } else if (msg.type === 'error') {
+        addLog('error', msg.message);
+      }
+    }
+    
+    function processResponse(response, rinfo) {
+      // Process answers
+      if (response.answers) {
+        response.answers.forEach(answer => {
+          addService(answer, rinfo);
+        });
+      }
+      
+      // Process additional records
+      if (response.additionals) {
+        response.additionals.forEach(additional => {
+          addService(additional, rinfo);
+        });
+      }
+    }
+    
+    function addService(record, rinfo) {
+      const key = `${record.name}-${record.type}-${rinfo.address}`;
+      
+      if (!services.has(key)) {
+        const service = {
+          name: record.name,
+          type: record.type,
+          data: record.data,
+          ttl: record.ttl,
+          address: rinfo.address,
+          port: rinfo.port,
+          timestamp: new Date()
+        };
+        
+        services.set(key, service);
+        devices.add(rinfo.address);
+        
+        addLog('info', `Discovered: ${record.name} (${record.type}) from ${rinfo.address}`);
+        updateServicesList();
+        updateStats();
+      }
+    }
+    
+    function startScan() {
+      if (!ws || ws.readyState !== WebSocket.OPEN) {
+        addLog('error', 'Not connected to server');
+        return;
+      }
+      
+      isScanning = true;
+      updateStatus('scanning', 'Scanning...');
+      addLog('info', 'Starting network scan...');
+      
+      ws.send(JSON.stringify({ type: 'scan' }));
+      
+      // Stop scanning animation after 10 seconds
+      setTimeout(() => {
+        if (isScanning) {
+          isScanning = false;
+          updateStatus('connected', 'Connected');
+          addLog('success', 'Scan complete');
+        }
+      }, 10000);
+    }
+    
+    function clearServices() {
+      services.clear();
+      devices.clear();
+      packetCount = 0;
+      updateServicesList();
+      updateStats();
+      updatePacketCount();
+      addLog('info', 'Cleared all services');
+    }
+    
+    function updateServicesList() {
+      const container = document.getElementById('servicesList');
+      
+      if (services.size === 0) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="empty-state-icon">📡</div>
+            <h3>No services discovered yet</h3>
+            <p>Click "Start Scan" to discover devices on your network</p>
+          </div>
+        `;
+        return;
+      }
+      
+      const serviceArray = Array.from(services.values());
+      serviceArray.sort((a, b) => a.name.localeCompare(b.name));
+      
+      container.innerHTML = serviceArray.map(service => `
+        <div class="service-card">
+          <div class="service-header">
+            <div class="service-name">${escapeHtml(service.name)}</div>
+            <div class="service-type">${escapeHtml(service.type)}</div>
+          </div>
+          <div class="service-details">
+            <div class="service-detail">
+              <div class="service-detail-label">Address</div>
+              <div class="service-detail-value">${escapeHtml(service.address)}</div>
+            </div>
+            <div class="service-detail">
+              <div class="service-detail-label">Data</div>
+              <div class="service-detail-value">${escapeHtml(formatData(service.data))}</div>
+            </div>
+            <div class="service-detail">
+              <div class="service-detail-label">TTL</div>
+              <div class="service-detail-value">${service.ttl || 'N/A'}</div>
+            </div>
+            <div class="service-detail">
+              <div class="service-detail-label">Discovered</div>
+              <div class="service-detail-value">${formatTime(service.timestamp)}</div>
+            </div>
+          </div>
+        </div>
+      `).join('');
+    }
+    
+    function updateStats() {
+      document.getElementById('deviceCount').textContent = devices.size;
+      document.getElementById('serviceCount').textContent = services.size;
+    }
+    
+    function updatePacketCount() {
+      document.getElementById('packetCount').textContent = packetCount;
+    }
+    
+    function updateStatus(status, text) {
+      const statusEl = document.getElementById('status');
+      const statusText = document.getElementById('statusText');
+      
+      statusEl.className = `status ${status}`;
+      statusText.textContent = text;
+    }
+    
+    function addLog(level, message) {
+      const logContainer = document.getElementById('logContainer');
+      const time = new Date().toLocaleTimeString();
+      
+      const logEntry = document.createElement('div');
+      logEntry.className = `log-entry ${level}`;
+      logEntry.innerHTML = `
+        <span class="log-time">[${time}]</span>
+        <span>${escapeHtml(message)}</span>
+      `;
+      
+      logContainer.appendChild(logEntry);
+      logContainer.scrollTop = logContainer.scrollHeight;
+      
+      // Keep only last 100 log entries
+      while (logContainer.children.length > 100) {
+        logContainer.removeChild(logContainer.firstChild);
+      }
+    }
+    
+    function formatData(data) {
+      if (typeof data === 'object' && data !== null) {
+        return JSON.stringify(data, null, 2);
+      }
+      return String(data);
+    }
+    
+    function formatTime(timestamp) {
+      return timestamp.toLocaleTimeString();
+    }
+    
+    function escapeHtml(text) {
+      const div = document.createElement('div');
+      div.textContent = text;
+      return div.innerHTML;
+    }
+    
+    // Connect on page load
+    connect();
+  </script>
+</body>
+</html>
